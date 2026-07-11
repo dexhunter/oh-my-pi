@@ -31,7 +31,6 @@ import type { LocalProtocolOptions } from "../internal-urls";
 import { callTool } from "../mcp/client";
 import type { MCPManager } from "../mcp/manager";
 import type { MnemopiSessionState } from "../mnemopi/state";
-import subagentSystemPromptTemplate from "../prompts/system/subagent-system-prompt.md" with { type: "text" };
 import submitReminderTemplate from "../prompts/system/subagent-yield-reminder.md" with { type: "text" };
 import { AgentLifecycleManager } from "../registry/agent-lifecycle";
 import { AgentRegistry } from "../registry/agent-registry";
@@ -59,6 +58,7 @@ import { buildNamedToolChoice } from "../utils/tool-choice";
 import type { WorkspaceTree } from "../workspace-tree";
 import { generateTaskLabel } from "./label";
 import { subprocessToolRegistry } from "./subprocess-tool-registry";
+import { buildSubagentSystemPrompt } from "./system-prompt";
 import {
 	type AgentDefinition,
 	type AgentProgress,
@@ -2118,6 +2118,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 		signal,
 		onProgress,
 	} = options;
+	const isMinimalTask = agent.systemPreset === "minimal-task";
 	const startTime = Date.now();
 	// Set by the session's onFirstChatDispatch hook the first time the agent
 	// loop dispatches a chat request to the provider — the launch-complete boundary.
@@ -2442,14 +2443,14 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 				outputSchema,
 				requireYieldTool: true,
 				contextFiles: options.contextFiles,
-				skills: options.skills,
+				skills: isMinimalTask ? [] : options.skills,
 				promptTemplates: options.promptTemplates,
 				workspaceTree: options.workspaceTree,
-				rules: options.rules,
+				rules: isMinimalTask ? [] : options.rules,
 				preloadedExtensionPaths: options.preloadedExtensionPaths,
 				preloadedCustomToolPaths: options.preloadedCustomToolPaths,
 				systemPrompt: defaultPrompt => {
-					const subagentPrompt = prompt.render(subagentSystemPromptTemplate, {
+					return buildSubagentSystemPrompt(defaultPrompt, agent.systemPreset, {
 						agent: agent.systemPrompt,
 						context: options.context?.trim() ?? "",
 						planReference: options.planReference?.content ?? "",
@@ -2460,9 +2461,6 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 						ircPeers: ircEnabled ? renderIrcPeerRoster(id) : "",
 						ircSelfId: ircEnabled ? id : "",
 					});
-					return defaultPrompt.length === 0
-						? [subagentPrompt]
-						: [...defaultPrompt.slice(0, -1), subagentPrompt, defaultPrompt[defaultPrompt.length - 1]];
 				},
 				sessionManager: sessionManagerForRun,
 				hasUI: false,
@@ -2629,7 +2627,7 @@ export async function runSubprocess(options: ExecutorOptions): Promise<SingleRes
 
 			checkAbort();
 			// Autoload skills via sendCustomMessage (same mechanic as /skill:<name>)
-			if (options.autoloadSkills?.length) {
+			if (!isMinimalTask && options.autoloadSkills?.length) {
 				for (const skill of options.autoloadSkills) {
 					const { message } = await buildSkillPromptMessage(skill, "", "autoload");
 					await session.sendCustomMessage(

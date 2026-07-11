@@ -16,6 +16,7 @@ import { invalidate as invalidateFsCache, readDirEntries, readFile } from "../ca
 import { parseRuleConditionAndScope, type Rule, type RuleFrontmatter } from "../capability/rule";
 import type { Skill, SkillFrontmatter } from "../capability/skill";
 import type { LoadContext, LoadResult, SourceMeta } from "../capability/types";
+import type { SystemPromptPreset } from "../task/types";
 import { type ConfiguredThinkingLevel, parseConfiguredThinkingLevel } from "../thinking";
 import { normalizeToolNames } from "../tools/builtin-names";
 
@@ -224,6 +225,7 @@ export function parseModelList(value: unknown): string[] | undefined {
 export interface ParsedAgentFields {
 	name: string;
 	description: string;
+	systemPreset?: SystemPromptPreset;
 	tools?: string[];
 	spawns?: string[] | "*";
 	model?: string[];
@@ -245,6 +247,12 @@ export function parseAgentFields(frontmatter: Record<string, unknown>): ParsedAg
 	if (!name || !description) {
 		return null;
 	}
+
+	const rawSystemPreset = frontmatter.systemPreset;
+	if (rawSystemPreset !== undefined && rawSystemPreset !== "minimal-task") {
+		throw new Error(`Invalid systemPreset: ${String(rawSystemPreset)}. Expected "minimal-task".`);
+	}
+	const systemPreset = rawSystemPreset as SystemPromptPreset | undefined;
 
 	let tools = parseArrayOrCSV(frontmatter.tools);
 	if (tools) tools = normalizeToolNames(tools);
@@ -289,7 +297,19 @@ export function parseAgentFields(frontmatter: Record<string, unknown>): ParsedAg
 	const autoloadSkills = parseArrayOrCSV(frontmatter.autoloadSkills)
 		?.map(s => s.trim())
 		.filter(Boolean);
-	return { name, description, tools, spawns, model, output, thinkingLevel, blocking, autoloadSkills, readSummarize };
+	return {
+		name,
+		description,
+		systemPreset,
+		tools,
+		spawns,
+		model,
+		output,
+		thinkingLevel,
+		blocking,
+		autoloadSkills,
+		readSummarize,
+	};
 }
 
 async function globIf(

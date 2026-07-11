@@ -15,6 +15,7 @@
 - Added support for per-ID bulk conflict directives via write({ path: "conflict://*", content: "..." }) to resolve multiple conflicts in a single call.
 - Added auto as a valid thinking-level in agent frontmatter, which is now the default for the bundled task subagent.
 - Added rich, interactive, fixed-height ask dialogs featuring question tabs, option previews, notes, and multi-select toggles.
+- Added an opt-in `systemPreset: minimal-task` agent setting that excludes inherited harness and project context from task subagents while retaining their execution contract. ([#4991](https://github.com/can1357/oh-my-pi/issues/4991))
 
 ### Changed
 

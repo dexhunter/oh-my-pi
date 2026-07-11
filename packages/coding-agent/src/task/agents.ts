@@ -15,7 +15,7 @@ import scoutMd from "../prompts/agents/scout.md" with { type: "text" };
 import taskMd from "../prompts/agents/task.md" with { type: "text" };
 import { AUTO_THINKING } from "../thinking";
 
-import type { AgentDefinition, AgentSource } from "./types";
+import type { AgentDefinition, AgentSource, SystemPromptPreset } from "./types";
 
 interface AgentFrontmatter {
 	name: string;
@@ -24,6 +24,7 @@ interface AgentFrontmatter {
 	spawns?: string;
 	model?: string | string[];
 	thinkingLevel?: string;
+	systemPreset?: SystemPromptPreset;
 	blocking?: boolean;
 }
 

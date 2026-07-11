@@ -24,7 +24,7 @@ It covers runtime behavior as implemented today, including precedence, invalid-d
 Task agents normalize into `AgentDefinition` (`src/task/types.ts`):
 
 - `name`, `description`, `systemPrompt` (required for a valid loaded agent)
-- optional `tools`, `spawns`, `model`, `thinkingLevel`, `output`, `blocking`, `autoloadSkills`, `readSummarize`
+- optional `tools`, `spawns`, `model`, `thinkingLevel`, `output`, `blocking`, `autoloadSkills`, `readSummarize`, `systemPreset`
 - `source`: `"bundled" | "user" | "project"`
 - optional `filePath`
 
@@ -35,6 +35,7 @@ Parsing comes from frontmatter via `parseAgentFields()` (`src/discovery/helpers.
 - `spawns` accepts `*`, CSV, or array
 - backward-compat behavior: if `spawns` missing but `tools` includes `task`, `spawns` becomes `*`
 - `output` is passed through as opaque schema data
+- `systemPreset: minimal-task` opts any bundled, user, or project agent into a contract-only subagent system prompt. It excludes inherited project context, custom system prompt blocks, skills, and rules while retaining the agent role, supplied context, plan, worktree constraints, IRC protocol, yield protocol, and output schema. Unknown preset values are invalid.
 - `read-summarize: false` (parsed as `readSummarize`) forces the subagent's `read` tool to return verbatim file content instead of structural summaries — `runSubprocess` applies it as a `read.summarize.enabled: false` override on the subagent's isolated settings (`src/task/executor.ts`). `scout` and `librarian` ship with it disabled. Defaults to enabled when the field is absent.
 
 ## Bundled agents

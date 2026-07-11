@@ -215,6 +215,41 @@ describe("autoloadSkills in executor", () => {
 		expect(sendCustomMessage).not.toHaveBeenCalled();
 	});
 
+	it("does not inject autoload skills for minimal-task agents", async () => {
+		const session = createMockSession(({ emit }) => {
+			emit({
+				type: "tool_execution_end",
+				toolCallId: "tool-1",
+				toolName: "yield",
+				result: {
+					content: [{ type: "text", text: "Result submitted." }],
+					details: { status: "success", data: { ok: true } },
+				},
+				isError: false,
+			});
+		});
+		vi.spyOn(sdkModule, "createAgentSession").mockResolvedValue(createSessionResult(session));
+		const buildSkillPromptMessage = vi.spyOn(skillsModule, "buildSkillPromptMessage");
+		const mockSkill: Skill = {
+			name: "user-created-skill",
+			description: "A custom skill",
+			filePath: "/skills/user-created-skill/SKILL.md",
+			baseDir: "/skills/user-created-skill",
+			source: "user",
+		};
+
+		const result = await runSubprocess({
+			...baseOptions,
+			agent: { ...baseAgent, systemPreset: "minimal-task" },
+			skills: [mockSkill],
+			autoloadSkills: [mockSkill],
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(buildSkillPromptMessage).not.toHaveBeenCalled();
+		expect(session.sendCustomMessage as Mock<any>).not.toHaveBeenCalled();
+	});
+
 	it("skill messages are sent before the task prompt", async () => {
 		const callOrder: string[] = [];
 		const session = createMockSession(({ emit }) => {

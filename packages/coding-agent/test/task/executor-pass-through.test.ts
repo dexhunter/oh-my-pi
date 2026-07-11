@@ -12,6 +12,7 @@ import type { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-regis
 import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
 import type { ToolPathWithSource } from "@oh-my-pi/pi-coding-agent/extensibility/custom-tools";
 import type { LoadExtensionsResult } from "@oh-my-pi/pi-coding-agent/extensibility/extensions/types";
+import type { Skill } from "@oh-my-pi/pi-coding-agent/extensibility/skills";
 import type { CreateAgentSessionResult } from "@oh-my-pi/pi-coding-agent/sdk";
 import * as sdkModule from "@oh-my-pi/pi-coding-agent/sdk";
 import type { AgentSession, AgentSessionEvent, PromptOptions } from "@oh-my-pi/pi-coding-agent/session/agent-session";
@@ -106,10 +107,19 @@ describe("runSubprocess parent-discovery pass-through (issue #2190)", () => {
 		vi.restoreAllMocks();
 	});
 
-	it("forwards rules, preloadedExtensionPaths, and preloadedCustomToolPaths to createAgentSession", async () => {
+	it("forwards skills, rules, preloadedExtensionPaths, and preloadedCustomToolPaths to createAgentSession", async () => {
 		const session = yieldEmittingSession();
 		const spy = vi.spyOn(sdkModule, "createAgentSession").mockResolvedValue(createSessionResult(session));
 
+		const skills: Skill[] = [
+			{
+				name: "skill-a",
+				description: "test skill",
+				filePath: "/skills/skill-a/SKILL.md",
+				baseDir: "/skills/skill-a",
+				source: "user",
+			},
+		];
 		const rules: Rule[] = [{ name: "rule-a" } as unknown as Rule];
 		const preloadedExtensionPaths = ["/abs/parent/.omp/extensions/foo.ts"];
 		const preloadedCustomToolPaths: ToolPathWithSource[] = [
@@ -118,6 +128,7 @@ describe("runSubprocess parent-discovery pass-through (issue #2190)", () => {
 
 		const result = await runSubprocess({
 			...baseOptions,
+			skills,
 			rules,
 			preloadedExtensionPaths,
 			preloadedCustomToolPaths,
@@ -127,6 +138,7 @@ describe("runSubprocess parent-discovery pass-through (issue #2190)", () => {
 		expect(spy).toHaveBeenCalledTimes(1);
 		const forwarded = spy.mock.calls[0]?.[0];
 		// Identity, not equality: passing a clone would defeat the perf fix.
+		expect(forwarded?.skills).toBe(skills);
 		expect(forwarded?.rules).toBe(rules);
 		expect(forwarded?.preloadedExtensionPaths).toBe(preloadedExtensionPaths);
 		expect(forwarded?.preloadedCustomToolPaths).toBe(preloadedCustomToolPaths);
@@ -143,6 +155,32 @@ describe("runSubprocess parent-discovery pass-through (issue #2190)", () => {
 		expect(forwarded?.rules).toBeUndefined();
 		expect(forwarded?.preloadedExtensionPaths).toBeUndefined();
 		expect(forwarded?.preloadedCustomToolPaths).toBeUndefined();
+	});
+
+	it("suppresses inherited skills and rules for minimal-task agents", async () => {
+		const session = yieldEmittingSession();
+		const spy = vi.spyOn(sdkModule, "createAgentSession").mockResolvedValue(createSessionResult(session));
+		const skills: Skill[] = [
+			{
+				name: "skill-a",
+				description: "test skill",
+				filePath: "/skills/skill-a/SKILL.md",
+				baseDir: "/skills/skill-a",
+				source: "user",
+			},
+		];
+		const rules: Rule[] = [{ name: "rule-a" } as unknown as Rule];
+
+		const result = await runSubprocess({
+			...baseOptions,
+			agent: { ...baseAgent, systemPreset: "minimal-task" },
+			skills,
+			rules,
+		});
+
+		expect(result.exitCode).toBe(0);
+		expect(spy.mock.calls[0]?.[0]?.skills).toEqual([]);
+		expect(spy.mock.calls[0]?.[0]?.rules).toEqual([]);
 	});
 
 	it("records the spawning agent as parentAgentId, distinct from the child's own id and prefix", async () => {
