@@ -14,6 +14,10 @@
 - `/fast` now switches Devin models onto their fast lanes, replacing the separate Devin Fast model entries; set `tier.devin: priority` to start every session in fast mode
 - The glob tool's header shows the globs a call searches, a separate `pattern` included, with wildcards, character classes and `{a,b}` alternations highlighted like grep's regex ([#20616](https://github.com/can1357/oh-my-pi/pull/20616) by [@JustasMasiulis](https://github.com/JustasMasiulis))
 - Ask forms highlight `<mark>` text, in the terminal and in Tern ([#19559](https://github.com/can1357/oh-my-pi/pull/19559) by [@pavel-kalmykov](https://github.com/pavel-kalmykov))
+- Added the opt-in `systemPreset: minimal-task` agent frontmatter setting for focused subagents,
+  including faithful native and in-band tool guidance, MCP server instructions,
+  opaque secret-token guidance, and cold-revival behavior
+  ([#6548](https://github.com/can1357/oh-my-pi/pull/6548) by [@dexhunter](https://github.com/dexhunter)).
 
 ### Changed
 
